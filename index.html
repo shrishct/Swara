@@ -1,0 +1,134 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14303a"><link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png"><title>Swara Log</title>
+<style>
+:root{--bg:#e8eeec;--fg:#14232b;--mut:#61757c;--card:#f7faf9;--line:#cbd7d4;--acc:#1f4e5a;--L:#5b8fd6;--R:#e9a13b;--B:#9b7fd1;--y:#3f9e6e;--n:#c9483c}
+@media(prefers-color-scheme:dark){:root{--bg:#0d181d;--fg:#e4eeee;--mut:#8ea3a9;--card:#152329;--line:#283a41;--acc:#7fc4d1}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 Palatino,'Palatino Linotype','Book Antiqua',Georgia,serif;padding:env(safe-area-inset-top) 0 calc(66px + env(safe-area-inset-bottom))}
+main{max-width:660px;margin:0 auto;padding:12px}
+h1{font-size:1.5rem;margin:.3em 0 0;font-weight:600}h2{font-size:1.05rem;margin:.9em 0 .3em;font-weight:600}
+.sub{color:var(--mut);font-size:.9rem;margin:0 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0}
+.row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.ch{border:1px solid var(--line);background:none;color:var(--fg);border-radius:18px;padding:8px 12px;font:inherit;font-size:.9rem}
+.ch.on{background:var(--c,var(--acc));color:#fff;border-color:var(--c,var(--acc))}
+.big{flex:1;padding:14px 4px;border-radius:8px;font-size:1rem;border-color:var(--c);border-width:2px}
+input,select{width:100%;padding:10px;margin:4px 0;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit}
+.go{width:100%;padding:12px;border:0;border-radius:8px;background:var(--acc);color:var(--bg);font:inherit;font-weight:700;margin-top:6px}
+.ghost{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 12px;font:inherit}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;padding:13px 0;border:0;background:none;color:var(--mut);font:inherit;font-size:.85rem}
+nav .on{color:var(--acc);font-weight:700;box-shadow:inset 0 3px var(--acc)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two h2{margin-top:.2em}
+.it{font-size:.85rem;border-bottom:1px solid var(--line);padding:6px 0;display:flex;gap:6px;align-items:baseline}
+.it b{font-weight:600}.it .x{margin-left:auto;background:none;border:0;color:var(--mut);font-size:1rem}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.g{display:grid;grid-template-columns:54px repeat(24,1fr);gap:1px;margin:2px 0;font-size:.6rem;color:var(--mut);align-items:center}
+.g i{height:18px;display:block;background:var(--line);border-radius:2px;font-style:normal;font-size:.55rem;text-align:center;line-height:18px;color:#fff}
+.g.h i{height:26px}
+.bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--line)}
+.leg{display:flex;flex-wrap:wrap;gap:10px;font-size:.78rem;color:var(--mut);margin:6px 0}
+.dn{display:flex;align-items:center;gap:8px}.dn div{flex:1;text-align:center}
+.rl{display:grid;grid-template-columns:1fr repeat(3,44px);gap:4px;align-items:center;font-size:.85rem}
+.rl button{padding:6px 0}
+</style></head><body>
+<main id="v"></main>
+<nav><button data-a="tab" data-v="log">Log</button><button data-a="tab" data-v="map">Day map</button><button data-a="tab" data-v="stats">Patterns</button><button data-a="tab" data-v="more">Settings</button></nav>
+<script>
+const $=q=>document.querySelector(q),E=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let D;try{D=JSON.parse(localStorage.getItem('swara.v1'))}catch(e){}D=D||{s:[],a:[],cfg:{}};
+D.cfg=Object.assign({sun:'06:00',rem:0,rules:{}},D.cfg);
+const save=()=>{try{localStorage.setItem('swara.v1',JSON.stringify(D))}catch(e){}};
+const HR=36e5,DAY=864e5,uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const day0=t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()};
+const ds=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const fromDs=s=>{const[y,m,d]=s.split('-');return new Date(y,m-1,d).getTime()};
+const hm=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+const loc=t=>{const d=new Date(t-new Date(t).getTimezoneOffset()*6e4);return d.toISOString().slice(0,16)};
+const N={L:['Left','Ida, Chandra','var(--L)'],R:['Right','Pingala, Surya','var(--R)'],B:['Both','Sushumna','var(--B)']};
+const T={P:['Prithvi','#c9a227'],A:['Apas','#9cc3dc'],J:['Tejas','#d24a32'],V:['Vayu','#3fa88c'],K:['Akasha','#463f63']};
+// activity: [label, glyph, default favourable nostrils]. A simplified reading of common swara-yoga guidance; edit in Settings.
+const ACT={wake:['Waking','☀','' ],water:['Drinking water','◌','L'],meal:['Meal','◉','R'],bath:['Bathing','≈','L'],elim:['Elimination','▽','R'],walk:['Walk','↝','R'],exercise:['Exercise','▲','R'],work:['Work','■','R'],study:['Study','▤','R'],talk:['Conversation','✦','L'],rest:['Rest','~','L'],sleep:['Sleep','☾','L'],meditate:['Meditation','◎','B'],prana:['Pranayama','❍','B'],prayer:['Prayer','✧','B'],travel:['Travel','➤','R']};
+const CONTEMPLATIVE=['meditate','prana','prayer'];
+const rule=a=>D.cfg.rules[a]??ACT[a][2];
+const TN=['Pratipada','Dwitiya','Tritiya','Chaturthi','Panchami','Shashthi','Saptami','Ashtami','Navami','Dashami','Ekadashi','Dwadashi','Trayodashi','Chaturdashi'];
+const tithi=t=>{const S=29.530588853,p=(((t/DAY+2440587.5-2451550.1)%S)+S)%S;return Math.floor(p/S*30)+1};
+const tname=ti=>(ti<=15?'Shukla ':'Krishna ')+(ti==15?'Purnima':ti==30?'Amavasya':TN[(ti-1)%15]);
+const sunAt=d=>{const[h,m]=D.cfg.sun.split(':');return d+h*HR+m*6e4};
+function ideal(t){let d=day0(t),s=sunAt(d);if(t<s){d=day0(d-12*HR);s=sunAt(d)}
+ const ti=tithi(s),sh=ti<=15,k=Math.floor(((ti-1)%15)/3),f=((k%2==0)===sh)?'L':'R';
+ return(Math.floor((t-s)/HR)%2)?(f=='L'?'R':'L'):f}
+function at(t){let b=null;for(const e of D.s)if(e.t<=t&&t-e.t<=3*HR&&(!b||e.t>b.t))b=e;return b}
+function verdict(a){if(a.c&&a.c!=='auto')return a.c;const e=at(a.t);if(!e)return'?';const g=rule(a.a);if(!g)return'm';
+ let ok=g.includes(e.n);if('VK'.includes(e.tt||'-')&&!CONTEMPLATIVE.includes(a.a))ok=false;return ok?'y':'n'}
+const VC={y:'var(--y)',n:'var(--n)',m:'#8a9a9f','?':'transparent'},VG={y:'✓',n:'✗',m:'–','?':'?'};
+let tab='log',vd=ds(Date.now()),sN='',sT='',sA='';
+const dayHead=d0=>{const ti=tithi(sunAt(d0));return new Date(d0).toLocaleDateString([],{weekday:'long',day:'numeric',month:'short'})+' · '+tname(ti)+' (approx.)'};
+const dayNav=()=>`<div class="dn"><button class="ghost" data-a="day" data-v="-1">‹</button><div>${dayHead(fromDs(vd))}</div><button class="ghost" data-a="day" data-v="1">›</button></div>`;
+const inDay=(arr,d0)=>arr.filter(e=>e.t>=d0&&e.t<d0+DAY).sort((a,b)=>a.t-b.t);
+const V={
+log(){const d0=fromDs(vd),S=inDay(D.s,d0),A=inDay(D.a,d0),now=Date.now();
+ return`<h1>Swara Log</h1><p class="sub">${vd==ds(now)?'Ideal breath right now: <b>'+N[ideal(now)][0]+'</b> (from sunrise '+D.cfg.sun+')':'Past day'}</p>
+ <div class="card"><h2>Breath</h2><div class="row">${Object.entries(N).map(([k,v])=>`<button class="ch big" style="--c:${v[2]}" data-a="n" data-v="${k}">${v[0]}<br><small>${v[1]}</small></button>`).join('')}</div>
+ <div class="row">${Object.entries(T).map(([k,v])=>`<button class="ch" data-a="tt" data-v="${k}"><span class="dot" style="background:${v[1]}"></span> ${v[0]}</button>`).join('')}</div>
+ <input id="st" type="datetime-local" value="${loc(now)}"><input id="sn" placeholder="Note (optional)"><button class="go" data-a="sw">Save breath</button></div>
+ <div class="card"><h2>Activity</h2><div class="row">${Object.entries(ACT).map(([k,v])=>`<button class="ch" data-a="act" data-v="${k}">${v[1]} ${v[0]}</button>`).join('')}</div>
+ <input id="at" type="datetime-local" value="${loc(now)}"><select id="ac"><option value="auto">Judge conduciveness automatically</option><option value="y">Mark as conducive</option><option value="m">Mark as neutral</option><option value="n">Mark as not conducive</option></select><input id="an" placeholder="Note (optional)"><button class="go" data-a="sa">Save activity</button></div>
+ ${dayNav()}<div class="two"><div><h2>Breath</h2>${S.map(e=>`<div class="it"><span class="dot" style="background:${N[e.n][2]}"></span><span><b>${hm(e.t)}</b> ${N[e.n][0]}${e.tt?', '+T[e.tt][0]:''}${e.note?'<br>'+E(e.note):''}</span><button class="x" data-a="del" data-k="s" data-v="${e.id}">×</button></div>`).join('')||'<p class="sub">No breath entries this day.</p>'}</div>
+ <div><h2>Activities</h2>${A.map(e=>{const v=verdict(e);return`<div class="it"><span style="color:${VC[v]}">${VG[v]}</span><span><b>${hm(e.t)}</b> ${ACT[e.a][1]} ${ACT[e.a][0]}${e.note?'<br>'+E(e.note):''}</span><button class="x" data-a="del" data-k="a" data-v="${e.id}">×</button></div>`}).join('')||'<p class="sub">No activities this day.</p>'}</div></div>`},
+map(){const d0=fromDs(vd),tk='<span></span>'+[...Array(24)].map((_,h)=>`<span>${h%3?'':h}</span>`).join('');
+ const cell=(c,x='',s='')=>`<i style="background:${c};${s}">${x}</i>`;
+ let iR='',aR='',cR='',m=0,tot=0;
+ for(let h=0;h<24;h++){const t=d0+h*HR+HR/2,i=ideal(t),e=at(t);iR+=cell(N[i][2]);
+  aR+=e?cell(N[e.n][2],e.tt?`<b style="color:${T[e.tt][1]}">●</b>`:''):cell('var(--line)');if(e){tot++;if(e.n==i)m++}
+  const A=D.a.filter(a=>a.t>=d0+h*HR&&a.t<d0+(h+1)*HR);cR+=A.length?cell(VC[verdict(A[0])]=='transparent'?'var(--line)':VC[verdict(A[0])],ACT[A[0].a][1]):cell('transparent','','outline:1px solid var(--line);outline-offset:-1px')}
+ let hm14='';for(let k=13;k>=0;k--){const dd=day0(day0(Date.now())-k*DAY+12*HR);let r=`<span>${new Date(dd).toLocaleDateString([],{day:'numeric',month:'short'})}</span>`;
+  for(let h=0;h<24;h++){const t=dd+h*HR+HR/2,e=at(t),i=ideal(t),A=D.a.filter(a=>a.t>=dd+h*HR&&a.t<dd+(h+1)*HR);
+   r+=`<i style="background:${e?N[e.n][2]:'var(--line)'};box-shadow:inset 0 -4px ${N[i][2]}">${A.length?`<b style="color:${VC[verdict(A[0])]=='transparent'?'#fff':VC[verdict(A[0])]};text-shadow:0 0 2px #fff">●</b>`:''}</i>`}
+  hm14+=`<div class="g h">${r}</div>`}
+ return`<h1>Day map</h1>${dayNav()}<div class="card"><div class="g">${tk}</div>
+ <div class="g"><span>Ideal</span>${iR}</div><div class="g"><span>Actual</span>${aR}</div><div class="g"><span>Activity</span>${cR}</div>
+ <p class="sub">${tot?`Rhythm kept in ${m} of ${tot} logged hours (${Math.round(m/tot*100)}%).`:'Log breath entries to compare with the ideal rhythm.'}</p>
+ <div class="leg"><span><span class="dot" style="background:var(--L)"></span> Left</span><span><span class="dot" style="background:var(--R)"></span> Right</span><span><span class="dot" style="background:var(--B)"></span> Both</span><span style="color:var(--y)">✓ conducive</span><span style="color:var(--n)">✗ not</span><span>dot in cell: Vayu or Akasha</span></div></div>
+ <h2>Last 14 days</h2><p class="sub">Cell colour is your actual breath. The strip along its base is the ideal for that hour. A dot marks an activity, green if conducive and red if not.</p><div class="card"><div class="g">${tk}</div>${hm14}</div>`},
+stats(){const by={};D.a.forEach(a=>{const o=by[a.a]=by[a.a]||{n:0,L:0,R:0,B:0,u:0,y:0,j:0};o.n++;const e=at(a.t);e?o[e.n]++:o.u++;const v=verdict(a);if(v=='y'||v=='n'){o.j++;if(v=='y')o.y++}});
+ const rows=Object.entries(by).sort((a,b)=>b[1].n-a[1].n).map(([k,o])=>{const w=x=>x/o.n*100+'%';
+ return`<div class="card"><b>${ACT[k][1]} ${ACT[k][0]}</b> <span class="sub">${o.n} logged${o.j?' · conducive '+Math.round(o.y/o.j*100)+'%':''}</span>
+ <div class="bar"><div style="width:${w(o.L)};background:var(--L)"></div><div style="width:${w(o.R)};background:var(--R)"></div><div style="width:${w(o.B)};background:var(--B)"></div></div>
+ <p class="sub" style="margin:4px 0 0">Left ${o.L} · Right ${o.R} · Both ${o.B}${o.u?' · no breath entry within 3 h: '+o.u:''}</p></div>`}).join('');
+ const hrs={L:0,R:0,B:0};D.s.forEach(e=>hrs[e.n]++);
+ return`<h1>Patterns</h1><p class="sub">Which nostril was open when each activity happened.</p>${rows||'<div class="card">Log a few activities and breath entries to see patterns here.</div>'}
+ <div class="card"><b>All breath entries</b> <span class="sub">${D.s.length}</span><div class="bar"><div style="width:${D.s.length?hrs.L/D.s.length*100:0}%;background:var(--L)"></div><div style="width:${D.s.length?hrs.R/D.s.length*100:0}%;background:var(--R)"></div><div style="width:${D.s.length?hrs.B/D.s.length*100:0}%;background:var(--B)"></div></div></div>`},
+more(){const c=D.cfg;return`<h1>Settings</h1>
+ <div class="card"><h2>Sunrise time</h2><p class="sub">The ideal rhythm starts at sunrise, alternating hourly. The first nostril follows the tithi at sunrise.</p><input type="time" id="sun" value="${c.sun}"></div>
+ <div class="card"><h2>Reminders</h2><p class="sub">Reminders fire while the app is open or in the background. A closed app cannot be woken without a push server.</p>
+ <select id="rem">${[[0,'Off'],[60,'Every hour, aligned to sunrise'],[120,'Every 2 hours, aligned to sunrise'],[180,'Every 3 hours, aligned to sunrise']].map(([v,l])=>`<option value="${v}" ${c.rem==v?'selected':''}>${l}</option>`).join('')}</select>
+ <button class="ghost" data-a="perm">Allow notifications (${window.Notification?Notification.permission:'unsupported'})</button></div>
+ <div class="card"><h2>Conducive rules</h2><p class="sub">Which nostril favours each activity. Vayu and Akasha count as unfavourable except for contemplative practice. Leave all off for no rule.</p>
+ ${Object.keys(ACT).map(k=>`<div class="rl"><span>${ACT[k][1]} ${ACT[k][0]}</span>${['L','R','B'].map(n=>`<button class="ch ${rule(k).includes(n)?'on':''}" style="--c:${N[n][2]}" data-a="rule" data-k="${k}" data-v="${n}">${n}</button>`).join('')}</div>`).join('')}</div>
+ <div class="card"><h2>Backup</h2><p class="sub">Data stays on this device. Export a file to keep a copy or move it to another device.</p>
+ <button class="go" data-a="exp">Export backup</button><input type="file" id="imp" accept=".json" style="margin-top:8px"></div>`}};
+function render(){$('#v').innerHTML=V[tab]();document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==tab));scrollTo(0,0)}
+const sel=(a,v)=>document.querySelectorAll(`[data-a=${a}]`).forEach(x=>x.classList.toggle('on',x.dataset.v===v));
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,v=b.dataset.v,k=b.dataset.k;
+ if(a=='tab'){tab=v;render()}
+ else if(a=='n'){sN=v;sel('n',v)}else if(a=='tt'){sT=sT==v?'':v;sel('tt',sT)}else if(a=='act'){sA=v;sel('act',v)}
+ else if(a=='sw'){if(!sN)return alert('Choose Left, Right or Both.');D.s.push({id:uid(),t:new Date($('#st').value).getTime(),n:sN,tt:sT,note:$('#sn').value.trim()});save();sN=sT='';vd=ds(D.s[D.s.length-1].t);render()}
+ else if(a=='sa'){if(!sA)return alert('Choose an activity.');D.a.push({id:uid(),t:new Date($('#at').value).getTime(),a:sA,c:$('#ac').value,note:$('#an').value.trim()});save();vd=ds(D.a[D.a.length-1].t);sA='';render()}
+ else if(a=='del'){if(confirm('Delete this entry?')){D[k]=D[k].filter(x=>x.id!=v);save();render()}}
+ else if(a=='day'){vd=ds(fromDs(vd)+ +v*DAY+12*HR);render()}
+ else if(a=='rule'){let g=rule(k);g=g.includes(v)?g.replace(v,''):g+v;D.cfg.rules[k]=g;save();b.classList.toggle('on')}
+ else if(a=='perm'){Notification.requestPermission().then(render)}
+ else if(a=='exp'){const u=URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'})),l=document.createElement('a');l.href=u;l.download='swara-log-'+ds(Date.now())+'.json';l.click()}});
+document.addEventListener('change',e=>{const i=e.target;
+ if(i.id=='sun'&&i.value){D.cfg.sun=i.value;save()}else if(i.id=='rem'){D.cfg.rem=+i.value;save()}
+ else if(i.id=='imp'&&i.files[0])i.files[0].text().then(x=>{try{const o=JSON.parse(x);['s','a'].forEach(k=>(o[k]||[]).forEach(r=>{if(!D[k].some(d=>d.id==r.id))D[k].push(r)}));Object.assign(D.cfg,o.cfg||{});save();alert('Backup imported.');render()}catch(_){alert('That file is not a valid Swara Log backup.')}})});
+let lastRem=0;setInterval(()=>{const P=D.cfg.rem;if(!P||!window.Notification||Notification.permission!=='granted')return;
+ const now=Date.now(),m=Math.floor(now/6e4),off=((m-Math.floor(sunAt(day0(now))/6e4))%P+P)%P;
+ if(off===0&&m!==lastRem){lastRem=m;navigator.serviceWorker.ready.then(r=>r.showNotification('Check your breath',{body:'Ideal now: '+N[ideal(now)][0]+'. Which nostril is open?',icon:'icon-192.png'}))}},15000);
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+render();
+</script></body></html>
